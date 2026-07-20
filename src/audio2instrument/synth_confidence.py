@@ -114,11 +114,3 @@ def correct_midi_from_audio(
             for note, item in zip(notes, evidence, strict=True)
         ],
     }
-
-
-def split_register(note: int, *, split_note: int = 60) -> str:
-    if not 0 <= note <= 127:
-        raise ValueError("note must be between 0 and 127")
-    if not 0 <= split_note <= 127:
-        raise ValueError("split_note must be between 0 and 127")
-    return "low" if note < split_note else "lead"
