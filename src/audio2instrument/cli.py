@@ -4,6 +4,7 @@ import argparse
 from pathlib import Path
 
 from audio2instrument import __version__
+from audio2instrument.expressive_poc import BassExpressivePocConfig, run_bass_expressive_poc
 from audio2instrument.inventory import inventory_json
 from audio2instrument.multisample_poc import BassMultisamplePocConfig, run_bass_multisample_poc
 from audio2instrument.poc import BassPocConfig, run_bass_poc
@@ -18,7 +19,9 @@ def build_parser() -> argparse.ArgumentParser:
     inventory.add_argument("--audio-zip", type=Path, required=True)
     inventory.add_argument("--midi-zip", type=Path, required=True)
 
-    bass = subparsers.add_parser("bass-poc", help="Build and render the three-note bass proof of concept")
+    bass = subparsers.add_parser(
+        "bass-poc", help="Build and render the three-note bass proof of concept"
+    )
     bass.add_argument("--audio", type=Path, required=True)
     bass.add_argument("--midi", type=Path, required=True)
     bass.add_argument("--out", type=Path, required=True)
@@ -31,6 +34,14 @@ def build_parser() -> argparse.ArgumentParser:
     multisample.add_argument("--audio", type=Path, required=True)
     multisample.add_argument("--midi", type=Path, required=True)
     multisample.add_argument("--out", type=Path, required=True)
+
+    expressive = subparsers.add_parser(
+        "bass-expressive-poc",
+        help="Add attack-only round robins and similarity-gated key crossfades",
+    )
+    expressive.add_argument("--audio", type=Path, required=True)
+    expressive.add_argument("--midi", type=Path, required=True)
+    expressive.add_argument("--out", type=Path, required=True)
     return parser
 
 
@@ -55,6 +66,17 @@ def main(argv: list[str] | None = None) -> int:
 
         report = run_bass_multisample_poc(
             BassMultisamplePocConfig(
+                audio_path=args.audio,
+                midi_path=args.midi,
+                output_dir=args.out,
+            )
+        )
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+    elif args.command == "bass-expressive-poc":
+        import json
+
+        report = run_bass_expressive_poc(
+            BassExpressivePocConfig(
                 audio_path=args.audio,
                 midi_path=args.midi,
                 output_dir=args.out,
