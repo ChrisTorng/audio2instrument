@@ -4,7 +4,12 @@ import argparse
 from pathlib import Path
 
 from audio2instrument import __version__
+from audio2instrument.drum_poc import DrumKitPocConfig, DrumPieceConfig, run_drum_kit_poc
 from audio2instrument.expressive_poc import BassExpressivePocConfig, run_bass_expressive_poc
+from audio2instrument.guitar_risk_poc import (
+    ElectricGuitarRiskConfig,
+    run_electric_guitar_risk_poc,
+)
 from audio2instrument.inventory import inventory_json
 from audio2instrument.multisample_poc import BassMultisamplePocConfig, run_bass_multisample_poc
 from audio2instrument.piano_risk_poc import PianoRiskPocConfig, run_piano_risk_poc
@@ -61,7 +66,45 @@ def build_parser() -> argparse.ArgumentParser:
     piano.add_argument("--midi", type=Path, required=True)
     piano.add_argument("--soundfont", type=Path, required=True)
     piano.add_argument("--out", type=Path, required=True)
+
+    guitar = subparsers.add_parser(
+        "electric-guitar-risk-poc",
+        help="Compare isolated-note addition with a held-out electric-guitar chord one-shot",
+    )
+    guitar.add_argument("--audio", type=Path, required=True)
+    guitar.add_argument("--midi", type=Path, required=True)
+    guitar.add_argument("--out", type=Path, required=True)
+
+    drums = subparsers.add_parser(
+        "drums-poc",
+        help="Build articulation-aware drum one-shots with velocity and round robin",
+    )
+    drums.add_argument("--audio-dir", type=Path, required=True)
+    drums.add_argument("--midi-dir", type=Path, required=True)
+    drums.add_argument("--out", type=Path, required=True)
     return parser
+
+
+def _drum_pieces(audio_dir: Path, midi_dir: Path) -> tuple[DrumPieceConfig, ...]:
+    layout = (
+        ("Kick", 0.80, 35),
+        ("Snare", 0.65, 37),
+        ("HiHat", 0.45, 42),
+        ("Tom", 0.80, 47),
+        ("Tambourine", 0.50, 51),
+        ("Shaker", 0.28, 53),
+        ("Conga", 0.55, 56),
+    )
+    return tuple(
+        DrumPieceConfig(
+            name=name,
+            audio_path=audio_dir / f"{name}.wav",
+            midi_path=midi_dir / f"{name}.mid",
+            sample_duration=duration,
+            first_target_key=first_key,
+        )
+        for name, duration, first_key in layout
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -121,6 +164,27 @@ def main(argv: list[str] | None = None) -> int:
                 audio_path=args.audio,
                 midi_path=args.midi,
                 soundfont_path=args.soundfont,
+                output_dir=args.out,
+            )
+        )
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+    elif args.command == "electric-guitar-risk-poc":
+        import json
+
+        report = run_electric_guitar_risk_poc(
+            ElectricGuitarRiskConfig(
+                audio_path=args.audio,
+                midi_path=args.midi,
+                output_dir=args.out,
+            )
+        )
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+    elif args.command == "drums-poc":
+        import json
+
+        report = run_drum_kit_poc(
+            DrumKitPocConfig(
+                pieces=_drum_pieces(args.audio_dir, args.midi_dir),
                 output_dir=args.out,
             )
         )
