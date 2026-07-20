@@ -7,6 +7,7 @@ from audio2instrument import __version__
 from audio2instrument.expressive_poc import BassExpressivePocConfig, run_bass_expressive_poc
 from audio2instrument.inventory import inventory_json
 from audio2instrument.multisample_poc import BassMultisamplePocConfig, run_bass_multisample_poc
+from audio2instrument.piano_risk_poc import PianoRiskPocConfig, run_piano_risk_poc
 from audio2instrument.poc import BassPocConfig, run_bass_poc
 from audio2instrument.velocity_poc import BassVelocityPocConfig, run_bass_velocity_poc
 
@@ -51,6 +52,15 @@ def build_parser() -> argparse.ArgumentParser:
     velocity.add_argument("--audio", type=Path, required=True)
     velocity.add_argument("--midi", type=Path, required=True)
     velocity.add_argument("--out", type=Path, required=True)
+
+    piano = subparsers.add_parser(
+        "piano-risk-poc",
+        help="Test isolated-note addition against a held-out four-note piano chord",
+    )
+    piano.add_argument("--audio", type=Path, required=True)
+    piano.add_argument("--midi", type=Path, required=True)
+    piano.add_argument("--soundfont", type=Path, required=True)
+    piano.add_argument("--out", type=Path, required=True)
     return parser
 
 
@@ -99,6 +109,18 @@ def main(argv: list[str] | None = None) -> int:
             BassVelocityPocConfig(
                 audio_path=args.audio,
                 midi_path=args.midi,
+                output_dir=args.out,
+            )
+        )
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+    elif args.command == "piano-risk-poc":
+        import json
+
+        report = run_piano_risk_poc(
+            PianoRiskPocConfig(
+                audio_path=args.audio,
+                midi_path=args.midi,
+                soundfont_path=args.soundfont,
                 output_dir=args.out,
             )
         )
