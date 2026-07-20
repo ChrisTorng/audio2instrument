@@ -44,3 +44,21 @@ def test_bass_multisample_poc_command_is_registered() -> None:
         ]
     )
     assert args.command == "bass-multisample-poc"
+
+
+def test_bass_expressive_poc_command_is_registered() -> None:
+    from audio2instrument.cli import build_parser
+
+    parser = build_parser()
+    args = parser.parse_args(
+        [
+            "bass-expressive-poc",
+            "--audio",
+            "bass.wav",
+            "--midi",
+            "bass.mid",
+            "--out",
+            "out",
+        ]
+    )
+    assert args.command == "bass-expressive-poc"
