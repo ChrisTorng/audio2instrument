@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+dist/
+build/
+*.egg-info/
+
+# User media and generated artifacts
+*.wav
+*.flac
+*.mp3
+*.ogg
+*.aif
+*.aiff
+*.mid
+*.midi
+*.sf2
+*.zip
+media/
+assets-private/
+work/
+out/
+reports/*.json
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
