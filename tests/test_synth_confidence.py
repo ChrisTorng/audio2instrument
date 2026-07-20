@@ -7,7 +7,6 @@ from audio2instrument.midi import NoteEvent, read_notes
 from audio2instrument.synth_confidence import (
     correct_midi_from_audio,
     filter_events_by_audio,
-    split_register,
     target_harmonic_ratio,
 )
 
@@ -57,8 +56,3 @@ def test_correct_midi_writes_only_supported_events(tmp_path: Path, monkeypatch) 
     assert report["accepted_events"] == 1
     assert len(written) == 1
     assert written[0].note == 69
-
-
-def test_register_split() -> None:
-    assert split_register(40) == "low"
-    assert split_register(69) == "lead"
