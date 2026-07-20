@@ -12,6 +12,35 @@ def test_cli_smoke() -> None:
 
 def test_bass_poc_command_is_registered() -> None:
     from audio2instrument.cli import build_parser
+
     parser = build_parser()
-    args = parser.parse_args(["bass-poc", "--audio", "bass.wav", "--midi", "bass.mid", "--out", "out"])
+    args = parser.parse_args(
+        [
+            "bass-poc",
+            "--audio",
+            "bass.wav",
+            "--midi",
+            "bass.mid",
+            "--out",
+            "out",
+        ]
+    )
     assert args.command == "bass-poc"
+
+
+def test_bass_multisample_poc_command_is_registered() -> None:
+    from audio2instrument.cli import build_parser
+
+    parser = build_parser()
+    args = parser.parse_args(
+        [
+            "bass-multisample-poc",
+            "--audio",
+            "bass.wav",
+            "--midi",
+            "bass.mid",
+            "--out",
+            "out",
+        ]
+    )
+    assert args.command == "bass-multisample-poc"

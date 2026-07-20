@@ -5,6 +5,7 @@ from pathlib import Path
 
 from audio2instrument import __version__
 from audio2instrument.inventory import inventory_json
+from audio2instrument.multisample_poc import BassMultisamplePocConfig, run_bass_multisample_poc
 from audio2instrument.poc import BassPocConfig, run_bass_poc
 
 
@@ -22,6 +23,14 @@ def build_parser() -> argparse.ArgumentParser:
     bass.add_argument("--midi", type=Path, required=True)
     bass.add_argument("--out", type=Path, required=True)
     bass.add_argument("--search-start", type=float, default=100.0)
+
+    multisample = subparsers.add_parser(
+        "bass-multisample-poc",
+        help="Build a five-root bass SFZ and render same-segment and held-out validations",
+    )
+    multisample.add_argument("--audio", type=Path, required=True)
+    multisample.add_argument("--midi", type=Path, required=True)
+    multisample.add_argument("--out", type=Path, required=True)
     return parser
 
 
@@ -38,6 +47,17 @@ def main(argv: list[str] | None = None) -> int:
                 midi_path=args.midi,
                 output_dir=args.out,
                 search_start=args.search_start,
+            )
+        )
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+    elif args.command == "bass-multisample-poc":
+        import json
+
+        report = run_bass_multisample_poc(
+            BassMultisamplePocConfig(
+                audio_path=args.audio,
+                midi_path=args.midi,
+                output_dir=args.out,
             )
         )
         print(json.dumps(report, ensure_ascii=False, indent=2))

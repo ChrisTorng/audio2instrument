@@ -44,6 +44,39 @@ class SampleInstrument:
                 raise ValueError("loop_crossfade must be shorter than the loop")
 
 
+@dataclass(frozen=True, slots=True)
+class SampleRegion:
+    instrument: SampleInstrument
+    low_key: int = 0
+    high_key: int = 127
+    low_velocity: int = 1
+    high_velocity: int = 127
+
+    def validate(self) -> None:
+        self.instrument.validate()
+        if not 0 <= self.low_key <= self.high_key <= 127:
+            raise ValueError("region key range must be between 0 and 127")
+        if not 1 <= self.low_velocity <= self.high_velocity <= 127:
+            raise ValueError("region velocity range must be between 1 and 127")
+
+    def matches(self, note: RenderNote) -> bool:
+        return (
+            self.low_key <= note.note <= self.high_key
+            and self.low_velocity <= note.velocity <= self.high_velocity
+        )
+
+
+def select_region(regions: list[SampleRegion], note: RenderNote) -> SampleRegion:
+    if not regions:
+        raise ValueError("at least one sample region is required")
+    for region in regions:
+        region.validate()
+    matches = [region for region in regions if region.matches(note)]
+    if not matches:
+        raise ValueError(f"no sample region covers MIDI note {note.note} velocity {note.velocity}")
+    return min(matches, key=lambda region: abs(region.instrument.root_note - note.note))
+
+
 def _pitch_shift_resample(samples: np.ndarray, semitones: int) -> tuple[np.ndarray, float]:
     duration_factor = 2.0 ** (-semitones / 12.0)
     new_length = max(1, round(len(samples) * duration_factor))
@@ -109,6 +142,7 @@ def render_voice(instrument: SampleInstrument, note: RenderNote) -> np.ndarray:
         release_end = min(len(voice), release_start + release_samples)
         count = release_end - release_start
         if count:
+            # Cosine release starts at the current value and reaches zero smoothly.
             envelope = 0.5 * (1.0 + np.cos(np.linspace(0.0, np.pi, count)))
             voice[release_start:release_end] *= envelope
         if release_end < len(voice):
@@ -118,7 +152,12 @@ def render_voice(instrument: SampleInstrument, note: RenderNote) -> np.ndarray:
     return voice * note.gain * velocity_gain
 
 
-def render_sequence(instrument: SampleInstrument, notes: list[RenderNote], *, tail: float = 0.0) -> np.ndarray:
+def render_sequence(
+    instrument: SampleInstrument,
+    notes: list[RenderNote],
+    *,
+    tail: float = 0.0,
+) -> np.ndarray:
     if not notes:
         return np.zeros(0, dtype=np.float64)
     if any(note.start < 0 for note in notes):
@@ -128,6 +167,33 @@ def render_sequence(instrument: SampleInstrument, notes: list[RenderNote], *, ta
     for note in notes:
         voice = render_voice(instrument, note)
         first = round(note.start * instrument.sample_rate)
+        last = min(len(output), first + len(voice))
+        output[first:last] += voice[: last - first]
+    return output
+
+
+def render_multisample_sequence(
+    regions: list[SampleRegion],
+    notes: list[RenderNote],
+    *,
+    tail: float = 0.0,
+) -> np.ndarray:
+    if not notes:
+        return np.zeros(0, dtype=np.float64)
+    if any(note.start < 0 for note in notes):
+        raise ValueError("note start times must be non-negative")
+    selected = [(note, select_region(regions, note)) for note in notes]
+    sample_rates = {region.instrument.sample_rate for _, region in selected}
+    if len(sample_rates) != 1:
+        raise ValueError("all selected sample regions must use the same sample rate")
+    sample_rate = sample_rates.pop()
+    end_time = max(
+        note.start + note.duration + region.instrument.release for note, region in selected
+    ) + tail
+    output = np.zeros(max(1, round(end_time * sample_rate)), dtype=np.float64)
+    for note, region in selected:
+        voice = render_voice(region.instrument, note)
+        first = round(note.start * sample_rate)
         last = min(len(output), first + len(voice))
         output[first:last] += voice[: last - first]
     return output
