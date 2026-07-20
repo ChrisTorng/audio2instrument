@@ -6,7 +6,6 @@ from audio2instrument.audio import AudioData
 from audio2instrument.midi import NoteEvent, read_notes
 from audio2instrument.synth_confidence import (
     correct_midi_from_audio,
-    evaluate_event,
     filter_events_by_audio,
     split_register,
     target_harmonic_ratio,
