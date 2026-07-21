@@ -22,15 +22,22 @@ must not be committed.
 - Inventory and pair audio/MIDI tracks inside archives.
 - Parse tempo-aware MIDI note events.
 - Correct MIDI events with acoustic onset and audio-confidence evidence.
+- Enforce strict single-event windows ending before the next scored or acoustically detected attack.
+- Audit exported note and drum samples for exactly one detected onset.
+- Extract short, isolated source attacks instead of retaining long contaminated note windows.
 - Extract root samples and map them across observed pitch ranges.
 - Find sustain-loop candidates and render note-off release envelopes.
 - Build multisample SFZ instruments with velocity layers and round robin.
+- Append explicitly labeled synthetic single-pitch tails when a clean source sustain is unavailable.
 - Build articulation-aware drum one-shot instruments.
 - Compare isolated-note addition with chord or phrase sampling for polyphonic sources.
 - Route synthesizer material by explicit sound-state sections rather than pitch range.
 - Extract time-varying loudness envelopes from the source track and apply them to reconstructions.
 - Keep samples separated by instrument so multiple SFZ files can share one parent directory.
 - Produce deterministic offline renders and objective comparison reports.
+
+See [Strict single-event sampling](docs/STRICT_SINGLE_EVENT_SAMPLING.md) for the mandatory acceptance
+rules and audit fields.
 
 ## Representation strategy
 
@@ -39,6 +46,7 @@ The preferred representation is selected from the evidence available in the sour
 | Source material | Preferred representation |
 |---|---|
 | Monophonic pitched instrument | Multisample SFZ |
+| Clean attack but contaminated or missing sustain | Source attack plus labeled synthetic single-pitch tail |
 | Repeated drum or percussion hits | Velocity/round-robin one-shots |
 | Distorted or strongly processed chord | Chord sample |
 | Sequenced or automated sound | Phrase sample or sound-state instrument |
@@ -49,9 +57,13 @@ A generated instrument is only expected to be reliable inside the pitch, velocit
 sound-state coverage supported by the source material. Large extrapolations must be reported rather
 than silently presented as recovered source audio.
 
+A long recording is not a valid note sample merely because only one MIDI note starts at its beginning.
+For note-level regions, preceding tails are subtracted, later attacks are excluded, non-target pitch
+energy is checked, and the exported file must contain exactly one detected attack.
+
 ## Output layout
 
-SFZ files may be stored together while samples remain isolated by instrument:
+SFZ files may be stored together while samples remain isolated by instrument and representation:
 
 ```text
 project-output/
@@ -62,8 +74,12 @@ project-output/
 └── Samples/
     ├── Bass/
     ├── ElectricGuitar/
+    │   ├── Attacks/
+    │   ├── HybridSingleNotes/
+    │   └── Chords/
     ├── Drums/
     └── SynthLead/
+        └── Phrases/
 ```
 
 ## Example workflow
@@ -78,13 +94,15 @@ audio2instrument bass-multisample-poc `
 ```
 
 A typical generated directory contains an SFZ file, instrument-scoped samples, validation MIDI,
-comparison audio, and a machine-readable report:
+comparison audio, sample-audition renders, and a machine-readable report:
 
 ```text
 bass-instrument/
 ├── Bass.sfz
 ├── validation.mid
 ├── comparison-report.json
+├── sample-audition.wav
+├── sample-audition.csv
 ├── validation/
 │   ├── original.wav
 │   └── reconstructed.wav
@@ -147,7 +165,7 @@ A practical combined workflow is:
 song
 → separation and MIDI extraction
 → audio-validated event graph
-→ source-specific extraction where coverage is reliable
+→ strict single-event extraction where coverage is reliable
 → generic or AI-generated completion where coverage is missing
 → source-volume automation
 → final mix and export
